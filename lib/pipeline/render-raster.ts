@@ -48,6 +48,41 @@ export async function renderPng(
   }
 }
 
+export async function renderRectPng(
+  svgMarkup: string,
+  width: number,
+  height: number,
+  background: Background = 'transparent'
+): Promise<Blob> {
+  const svgBlob = new Blob([svgMarkup], { type: 'image/svg+xml' });
+  const url = URL.createObjectURL(svgBlob);
+
+  try {
+    const image = await loadImage(url);
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('renderRectPng: no 2d context available');
+
+    if (background !== 'transparent') {
+      ctx.fillStyle = background;
+      ctx.fillRect(0, 0, width, height);
+    }
+
+    ctx.drawImage(image, 0, 0, width, height);
+
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => (blob ? resolve(blob) : reject(new Error('renderRectPng: toBlob failed'))),
+        'image/png'
+      );
+    });
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image();

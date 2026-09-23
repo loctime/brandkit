@@ -5,8 +5,12 @@ import { renderWordmarkSvg } from './wordmark';
 import { buildIco, type IcoImage } from '../ico/packer';
 import { expectedManifestPaths } from '../package/manifest';
 import { buildZipBytes, type ZipEntry } from '../package/zip';
-import { renderPng, type Background } from './render-raster';
+import { renderPng, renderRectPng, type Background } from './render-raster';
 import { renderBrandSheet } from './render-brand-sheet';
+import { renderHorizontalLayoutSvg, renderVerticalLayoutSvg, renderBadgeLayoutSvg } from './layouts';
+import { renderPatternSvg } from './patterns';
+import { renderLinkedInBannerSvg, renderTwitterBannerSvg } from './banners';
+import { renderGoldFoilSvg, renderNeonGlowSvg, renderStampGrungeSvg } from './styles';
 
 const VARIANTS: VariantName[] = ['full-color', 'black', 'white', 'grayscale', 'monochrome'];
 const BACKGROUNDS: Background[] = ['transparent', 'white', 'black'];
@@ -22,9 +26,6 @@ export interface GenerateKitInput {
 }
 
 export async function generateBrandKit(input: GenerateKitInput): Promise<Uint8Array> {
-  // Always driven by the logo's own primary color (see BrandInputs), never
-  // the merged palette — a reference photo's dominant color must never
-  // become the single-color logo variant's color.
   const monochromeHex = input.primaryColor?.hex ?? '#000000';
   const entries: ZipEntry[] = [];
 
@@ -66,9 +67,6 @@ export async function generateBrandKit(input: GenerateKitInput): Promise<Uint8Ar
   const wordmarkSvg = renderWordmarkSvg(input.brandName, input.fontPairing);
   entries.push({ path: 'wordmark/wordmark.svg', data: wordmarkSvg });
   for (const background of BACKGROUNDS) {
-    // Dark text on the black background would be invisible — render a
-    // light-text version specifically for that background instead of
-    // reusing the dark-on-transparent/white version everywhere.
     const wordmarkForBg =
       background === 'black' ? renderWordmarkSvg(input.brandName, input.fontPairing, '#f5f5f5') : wordmarkSvg;
     const blob = await renderPng(wordmarkForBg, 480, background);
@@ -81,6 +79,107 @@ export async function generateBrandKit(input: GenerateKitInput): Promise<Uint8Ar
     fontPairing: input.fontPairing,
   });
   entries.push({ path: 'guia-de-marca.png', data: await blobToBytes(brandSheetBlob) });
+
+  // 1. Layouts (Combined Icon + Wordmark)
+  const horizontalSvg = renderHorizontalLayoutSvg({
+    logoSvg: variantSvgs['full-color'],
+    brandName: input.brandName,
+    fontPairing: input.fontPairing,
+  });
+  entries.push({ path: 'layouts/logo-horizontal.svg', data: horizontalSvg });
+  const horizontalBlob = await renderRectPng(horizontalSvg, 800, 180, 'transparent');
+  entries.push({ path: 'layouts/logo-horizontal.png', data: await blobToBytes(horizontalBlob) });
+
+  const verticalSvg = renderVerticalLayoutSvg({
+    logoSvg: variantSvgs['full-color'],
+    brandName: input.brandName,
+    fontPairing: input.fontPairing,
+  });
+  entries.push({ path: 'layouts/logo-vertical.svg', data: verticalSvg });
+  const verticalBlob = await renderPng(verticalSvg, 500, 'transparent');
+  entries.push({ path: 'layouts/logo-vertical.png', data: await blobToBytes(verticalBlob) });
+
+  const badgeSvg = renderBadgeLayoutSvg({
+    logoSvg: variantSvgs['full-color'],
+    brandName: input.brandName,
+    fontPairing: input.fontPairing,
+    badgeColor: monochromeHex,
+  });
+  entries.push({ path: 'layouts/logo-badge.svg', data: badgeSvg });
+  const badgeBlob = await renderPng(badgeSvg, 500, 'transparent');
+  entries.push({ path: 'layouts/logo-badge.png', data: await blobToBytes(badgeBlob) });
+
+  // 2. Social Media Banners
+  const liBannerSvg = renderLinkedInBannerSvg({
+    logoSvg: variantSvgs['full-color'],
+    brandName: input.brandName,
+    fontPairing: input.fontPairing,
+    primaryColor: monochromeHex,
+  });
+  entries.push({ path: 'banners/banner-linkedin.svg', data: liBannerSvg });
+  const liBannerBlob = await renderRectPng(liBannerSvg, 1584, 396, 'black');
+  entries.push({ path: 'banners/banner-linkedin.png', data: await blobToBytes(liBannerBlob) });
+
+  const twBannerSvg = renderTwitterBannerSvg({
+    logoSvg: variantSvgs['full-color'],
+    brandName: input.brandName,
+    fontPairing: input.fontPairing,
+    primaryColor: monochromeHex,
+  });
+  entries.push({ path: 'banners/banner-twitter.svg', data: twBannerSvg });
+  const twBannerBlob = await renderRectPng(twBannerSvg, 1500, 500, 'black');
+  entries.push({ path: 'banners/banner-twitter.png', data: await blobToBytes(twBannerBlob) });
+
+  // 3. Brand Patterns & Wallpapers
+  const monogramDesktopSvg = renderPatternSvg({
+    logoSvg: variantSvgs['white'],
+    bgColor: '#090a0f',
+    opacity: 0.08,
+    width: 1920,
+    height: 1080,
+    tileScale: 120,
+  });
+  entries.push({ path: 'fondos/patron-monograma-desktop.svg', data: monogramDesktopSvg });
+  const monogramDesktopBlob = await renderRectPng(monogramDesktopSvg, 1920, 1080, 'black');
+  entries.push({ path: 'fondos/patron-monograma-desktop.png', data: await blobToBytes(monogramDesktopBlob) });
+
+  const monogramMobileSvg = renderPatternSvg({
+    logoSvg: variantSvgs['white'],
+    bgColor: '#090a0f',
+    opacity: 0.08,
+    width: 1080,
+    height: 1920,
+    tileScale: 100,
+  });
+  entries.push({ path: 'fondos/patron-monograma-mobile.svg', data: monogramMobileSvg });
+  const monogramMobileBlob = await renderRectPng(monogramMobileSvg, 1080, 1920, 'black');
+  entries.push({ path: 'fondos/patron-monograma-mobile.png', data: await blobToBytes(monogramMobileBlob) });
+
+  // 4. Textured & Aesthetic Styles
+  const goldFoilSvg = renderGoldFoilSvg(variantSvgs['full-color']);
+  entries.push({ path: 'estilos/logo-dorado.svg', data: goldFoilSvg });
+  const goldBlob = await renderPng(goldFoilSvg, 512, 'black');
+  entries.push({ path: 'estilos/logo-dorado.png', data: await blobToBytes(goldBlob) });
+
+  const neonGlowSvg = renderNeonGlowSvg(variantSvgs['full-color'], monochromeHex);
+  entries.push({ path: 'estilos/logo-neon.svg', data: neonGlowSvg });
+  const neonBlob = await renderPng(neonGlowSvg, 512, 'black');
+  entries.push({ path: 'estilos/logo-neon.png', data: await blobToBytes(neonBlob) });
+
+  const stampSvg = renderStampGrungeSvg(variantSvgs['full-color'], '#1f2937');
+  entries.push({ path: 'estilos/logo-sello.svg', data: stampSvg });
+  const stampBlob = await renderPng(stampSvg, 512, 'white');
+  entries.push({ path: 'estilos/logo-sello.png', data: await blobToBytes(stampBlob) });
+
+  // 5. Pack para Canva (Capas sueltas)
+  entries.push({
+    path: 'para-canva/01-isotipo-hd.png',
+    data: await blobToBytes(await renderPng(variantSvgs['full-color'], 1024, 'transparent')),
+  });
+  entries.push({
+    path: 'para-canva/02-wordmark-hd.png',
+    data: await blobToBytes(await renderPng(wordmarkSvg, 1024, 'transparent')),
+  });
 
   assertMatchesManifest(entries);
   return buildZipBytes(entries);
