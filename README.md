@@ -15,12 +15,11 @@ permisiva, este requisito deja de aplicar.
 
 ## Deploy
 
-1. `npm run build` genera el sitio estático en `out/`.
-2. Desplegar en Vercel (proyecto nuevo o `vercel --prod`).
-3. **Conectar el dominio `brandkit.controlapps.ar` es un paso manual**: agregar el dominio
-   en la configuración del proyecto en Vercel y crear el registro CNAME correspondiente
-   en Cloudflare para `brandkit`. No lo hace este repo ni ningún script — requiere acceso
-   a las cuentas de Vercel/Cloudflare.
+Desplegado en Vercel (proyecto `brandkit`, linkeado al repo de GitHub, deploy automático en
+push a `main`) + dominio `brandkit.controlapps.ar` (CNAME en Cloudflare a `cname.vercel-dns.com`,
+sin proxy). Vercel detecta el framework Next.js solo y sirve el export estático (`output: 'export'`
+en `next.config.ts`) — no hace falta `outputDirectory`/`buildCommand` custom en la config del
+proyecto, entran en conflicto con el preset de Next.js.
 
 ## Desarrollo
 
