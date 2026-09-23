@@ -1,19 +1,30 @@
 declare module 'imagetracerjs' {
-  interface ImageTracerImageData {
+  export interface ImageTracerImageData {
     width: number;
     height: number;
     data: Uint8ClampedArray;
   }
 
-  interface ImageTracerOptions {
+  export interface ImageTracerColor {
+    r: number;
+    g: number;
+    b: number;
+    a: number;
+  }
+
+  export interface ImageTracerOptions {
     ltres?: number;
     qtres?: number;
     pathomit?: number;
     numberofcolors?: number;
+    colorsampling?: number;
+    colorquantcycles?: number;
+    mincolorratio?: number;
+    pal?: ImageTracerColor[];
     viewbox?: boolean;
   }
 
-  interface ImageTracerStatic {
+  export interface ImageTracerStatic {
     imagedataToSVG(imageData: ImageTracerImageData, options?: ImageTracerOptions): string;
   }
 
