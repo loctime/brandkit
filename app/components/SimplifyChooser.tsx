@@ -30,6 +30,7 @@ export function SimplifyChooser({ traced, onChoose, onRejectAll }: SimplifyChoos
           <button
             key={candidate.levels}
             type="button"
+            className="simplify-candidate"
             onClick={() => onChoose(candidate.svgMarkup)}
             dangerouslySetInnerHTML={{ __html: candidate.svgMarkup }}
           />
