@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { UploadStep, type TracedResult } from './components/UploadStep';
 import { SimplifyChooser } from './components/SimplifyChooser';
 import { BrandInputs } from './components/BrandInputs';
+import { ResultsStep } from './components/ResultsStep';
 import type { PaletteColor } from '../lib/color/palette';
 import type { FontPairing } from '../lib/color/personality';
 
@@ -49,7 +50,9 @@ export default function Home() {
           onReady={setBrandInfo}
         />
       )}
-      {brandInfo && <p>Kit listo para generar.</p>}
+      {brandInfo && approvedSvg && (
+        <ResultsStep input={{ baseSvg: approvedSvg, ...brandInfo }} />
+      )}
     </main>
   );
 }
