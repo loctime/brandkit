@@ -23,6 +23,23 @@ describe('layouts module', () => {
     expect(content).toContain('circle');
   });
 
+  it('preserves a filter applied on the root <svg> by re-wrapping the content in a <g>', () => {
+    // buildColorVariant's recolor (black/white/monochrome) applies its
+    // feFlood/feComposite filter via a `filter="url(#...)"` attribute on the
+    // root <svg> tag itself, not on any inner element. A naive extraction
+    // that keeps only what's between the tags drops that attribute — the
+    // filter definition survives in <defs> but nothing ever references it,
+    // so the recolor silently has no effect wherever this content gets
+    // re-embedded (e.g. the pattern generator).
+    const filteredLogo = `<svg viewBox="0 0 100 100" filter="url(#brandkit-recolor)"><defs><filter id="brandkit-recolor"><feFlood flood-color="#ffffff" result="flood"/><feComposite in="flood" in2="SourceGraphic" operator="in"/></filter></defs><path fill="rgb(220,30,40)" d="M0 0 L10 10 Z"/></svg>`;
+    const { content } = parseSvgContent(filteredLogo);
+
+    expect(content).toContain('filter="url(#brandkit-recolor)"');
+    // The filter must wrap the actual drawable content, not just appear
+    // somewhere in the string disconnected from it.
+    expect(content).toMatch(/<g filter="url\(#brandkit-recolor\)">[\s\S]*<path/);
+  });
+
   it('renders horizontal layout with text and nested svg', () => {
     const svg = renderHorizontalLayoutSvg({
       logoSvg: mockLogo,

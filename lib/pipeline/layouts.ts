@@ -13,7 +13,17 @@ export function parseSvgContent(svgString: string): { viewBox: string; content: 
 
   // Extract everything between <svg...> and </svg>
   const innerMatch = svgString.replace(/^[\s\S]*?<svg[^>]*>/i, '').replace(/<\/svg>[\s\S]*$/i, '');
-  return { viewBox, content: innerMatch };
+
+  // buildColorVariant's recolor filter (black/white/monochrome) is applied
+  // via a `filter="url(#...)"` attribute on the root <svg> tag, not on any
+  // inner element — the line above strips that tag along with the attribute.
+  // Re-wrap the content in a <g> carrying the same filter so recolored
+  // variants keep their color wherever this content gets re-embedded.
+  const rootTagMatch = svgString.match(/<svg[^>]*>/i);
+  const filterMatch = rootTagMatch ? rootTagMatch[0].match(/\sfilter=["']([^"']+)["']/i) : null;
+  const content = filterMatch ? `<g filter="${filterMatch[1]}">${innerMatch}</g>` : innerMatch;
+
+  return { viewBox, content };
 }
 
 export function escapeXml(text: string): string {

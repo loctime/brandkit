@@ -6,6 +6,7 @@ import { buildIco, type IcoImage } from '../ico/packer';
 import { expectedManifestPaths } from '../package/manifest';
 import { buildZipBytes, type ZipEntry } from '../package/zip';
 import { renderPng, renderRectPng, type Background } from './render-raster';
+import { getSvgAspectRatio } from '../svg/aspect-ratio';
 import { renderBrandSheet } from './render-brand-sheet';
 import { renderHorizontalLayoutSvg, renderVerticalLayoutSvg, renderBadgeLayoutSvg } from './layouts';
 import { renderPatternSvg } from './patterns';
@@ -87,7 +88,12 @@ export async function generateBrandKit(input: GenerateKitInput): Promise<Uint8Ar
     fontPairing: input.fontPairing,
   });
   entries.push({ path: 'layouts/logo-horizontal.svg', data: horizontalSvg });
-  const horizontalBlob = await renderRectPng(horizontalSvg, 800, 180, 'transparent');
+  // The horizontal layout's own width is dynamic (it grows with the brand
+  // name's length) — rendering it into a hardcoded rect stretched/squished
+  // it whenever that width wasn't exactly 800. Reading the SVG's real size
+  // keeps the PNG an undistorted match of the SVG it's exported alongside.
+  const horizontalSize = getSvgAspectRatio(horizontalSvg);
+  const horizontalBlob = await renderRectPng(horizontalSvg, horizontalSize.width, horizontalSize.height, 'transparent');
   entries.push({ path: 'layouts/logo-horizontal.png', data: await blobToBytes(horizontalBlob) });
 
   const verticalSvg = renderVerticalLayoutSvg({

@@ -64,4 +64,89 @@ describe('traceToSvg and extractTracePalette', () => {
     expect(fills.some((f) => f.includes('255') && f.includes('100'))).toBe(true);
     expect(fills.some((f) => f.includes('255,255,255'))).toBe(true);
   });
+
+  it('treats semi-transparent near-white fringe pixels as background, not a foreground color', () => {
+    // Reproduces the real artifact: @imgly/background-removal leaves a soft,
+    // feathered edge around the cutout instead of a hard alpha=0 cutoff —
+    // near-white pixels with alpha in the 30-150 range, not fully opaque and
+    // not fully transparent. Those must not become their own visible white
+    // shape in the trace.
+    const data = new Uint8ClampedArray([
+      0, 0, 0, 0, // fully transparent background
+      255, 255, 233, 40, // fringe residue: near-white, low alpha
+      255, 248, 234, 90, // fringe residue: near-white, mid alpha
+      255, 0, 0, 255, // real opaque foreground (red)
+    ]);
+    const pixels: PixelBuffer = { data, width: 4, height: 1 };
+    const palette = extractTracePalette(pixels, 16);
+
+    const nearWhiteForeground = palette.some(
+      (c) => c.a > 0 && c.r > 200 && c.g > 200 && c.b > 200
+    );
+    expect(nearWhiteForeground).toBe(false);
+  });
+
+  it('does not trace sub-threshold fringe pixels as a solid shape when a legitimate white color is also present', () => {
+    // The palette can correctly exclude a color from its own averages while
+    // the *source* pixels handed to imagetracerjs still carry their original
+    // (non-zero) alpha — imagetracerjs does its own nearest-palette-color
+    // assignment on that raw data, and once a real near-white color exists in
+    // the palette (e.g. a white part of the logo, exactly like the real
+    // photo that exposed this), it matches the low-alpha residue to that
+    // opaque white entry by RGB proximity alone, ignoring how transparent the
+    // source pixel actually was. Reproduced directly against imagetracerjs:
+    // without the fix, this scenario traces the residue band as a solid
+    // `fill="rgb(255,255,255)" opacity="1"` rectangle.
+    const width = 100;
+    const height = 100;
+    const data = new Uint8ClampedArray(width * height * 4);
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const idx = (y * width + x) * 4;
+        if (x >= 40 && x <= 90 && y >= 10 && y <= 50) {
+          // Real opaque red part of the logo
+          data[idx] = 255;
+          data[idx + 1] = 0;
+          data[idx + 2] = 0;
+          data[idx + 3] = 255;
+        } else if (x >= 40 && x <= 90 && y >= 51 && y <= 90) {
+          // Real opaque WHITE part of the logo — this is what gives the
+          // residue band below something near-white to get misattributed to.
+          data[idx] = 255;
+          data[idx + 1] = 255;
+          data[idx + 2] = 255;
+          data[idx + 3] = 255;
+        } else if (x >= 5 && x <= 15) {
+          // Fringe residue: a substantial band fully outside the real shape,
+          // near-white, meaningfully but not fully opaque (mirrors the real
+          // background-removal edge bleed observed in production).
+          data[idx] = 250;
+          data[idx + 1] = 248;
+          data[idx + 2] = 245;
+          data[idx + 3] = 90;
+        } else {
+          // Fully transparent background
+          data[idx] = 0;
+          data[idx + 1] = 0;
+          data[idx + 2] = 0;
+          data[idx + 3] = 0;
+        }
+      }
+    }
+
+    const pixels: PixelBuffer = { data, width, height };
+    const svg = traceToSvg(pixels);
+
+    // A leftover residue shape would appear as its own separate opaque white
+    // path whose coordinates sit in the x:5-16 band, well outside the real
+    // logo's x:40-90 shape.
+    const pathTags = svg.match(/<path[^>]*\/>/g) ?? [];
+    const residueLeaked = pathTags.some((tag) => {
+      const isOpaqueWhite = /fill="rgb\(255,\s*255,\s*255\)"/.test(tag) && /opacity="1"/.test(tag);
+      const startsInResidueBand = /d="M 5(\.\d+)? /.test(tag);
+      return isOpaqueWhite && startsInResidueBand;
+    });
+    expect(residueLeaked).toBe(false);
+  });
 });
