@@ -5,6 +5,7 @@ import { UploadStep, type TracedResult } from './components/UploadStep';
 import { SimplifyChooser } from './components/SimplifyChooser';
 import { BrandInputs } from './components/BrandInputs';
 import { ResultsStep } from './components/ResultsStep';
+import { isWasmSupported } from '../lib/upload/browser-support';
 import type { PaletteColor } from '../lib/color/palette';
 import type { FontPairing } from '../lib/color/personality';
 
@@ -30,6 +31,18 @@ export default function Home() {
     setTraced(null);
     setApprovedSvg(null);
     setBrandInfo(null);
+  }
+
+  if (typeof window !== 'undefined' && !isWasmSupported()) {
+    return (
+      <main>
+        <h1>BrandKit</h1>
+        <p role="alert">
+          Tu navegador no soporta el procesamiento necesario. Probá con Chrome, Edge o Firefox
+          actualizado.
+        </p>
+      </main>
+    );
   }
 
   return (
