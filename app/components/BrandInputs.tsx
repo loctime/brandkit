@@ -1,21 +1,31 @@
 'use client';
 
 import { useState } from 'react';
-import { extractPalette, type PaletteColor } from '../../lib/color/palette';
+import { extractPalette, pickPrimaryBrandColor, type PaletteColor } from '../../lib/color/palette';
 import { normalizePalette, mergePalettes } from '../../lib/color/merge-palette';
 import { inferPersonality, fontPairingFor, type FontPairing } from '../../lib/color/personality';
 import type { PixelBuffer } from '../../lib/pipeline/posterize';
 import type { ComplexityResult } from '../../lib/svg/complexity';
 
+export interface BrandInfoResult {
+  brandName: string;
+  palette: PaletteColor[];
+  primaryColor: PaletteColor;
+  fontPairing: FontPairing;
+}
+
 interface BrandInputsProps {
   logoPixels: PixelBuffer;
   complexity: ComplexityResult;
-  onReady: (result: { brandName: string; palette: PaletteColor[]; fontPairing: FontPairing }) => void;
+  onReady: (result: BrandInfoResult) => void;
 }
 
-// Reference images only nudge the palette, they never replace the logo's own
-// colors: the logo's pixels always outweigh any single reference image so a
-// busy or differently-colored reference photo can't swamp the brand color.
+// Reference images broaden the displayed palette and nudge personality
+// inference, but never decide the monochrome/primary brand color: that
+// color is always picked from the logo's own palette alone (see
+// `primaryColor` below), so a reference photo's dominant color — even one
+// that outranks the logo's in the merged, weighted palette — can't become
+// the color used for the single-color logo variant.
 const LOGO_PALETTE_WEIGHT = 3;
 
 export function BrandInputs({ logoPixels, complexity, onReady }: BrandInputsProps) {
@@ -27,6 +37,7 @@ export function BrandInputs({ logoPixels, complexity, onReady }: BrandInputsProp
     setBusy(true);
     try {
       const logoPalette = extractPalette(logoPixels);
+      const primaryColor = pickPrimaryBrandColor(logoPalette);
       const weightedLogoPalette = normalizePalette(logoPalette, LOGO_PALETTE_WEIGHT);
 
       const referencePalettes: PaletteColor[] = [];
@@ -44,7 +55,7 @@ export function BrandInputs({ logoPixels, complexity, onReady }: BrandInputsProp
       const palette = mergePalettes([...weightedLogoPalette, ...referencePalettes]);
       const fontPairing = fontPairingFor(inferPersonality(palette, complexity));
 
-      onReady({ brandName, palette, fontPairing });
+      onReady({ brandName, palette, primaryColor, fontPairing });
     } finally {
       setBusy(false);
     }

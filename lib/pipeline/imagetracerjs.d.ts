@@ -10,6 +10,7 @@ declare module 'imagetracerjs' {
     qtres?: number;
     pathomit?: number;
     numberofcolors?: number;
+    viewbox?: boolean;
   }
 
   interface ImageTracerStatic {

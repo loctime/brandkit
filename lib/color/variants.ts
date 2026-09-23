@@ -1,20 +1,26 @@
 export type VariantName = 'full-color' | 'black' | 'white' | 'grayscale' | 'monochrome';
 
-const FILL_ATTR_PATTERN = /(fill=")(#[0-9a-fA-F]{3,8}|[a-zA-Z]+)(")/g;
-
 export function buildColorVariant(
   svgMarkup: string,
   variant: VariantName,
   monochromeHex?: string
 ): string {
   if (variant === 'full-color') return svgMarkup;
-  if (variant === 'grayscale') return applyGrayscaleFilter(svgMarkup);
+  if (variant === 'grayscale') {
+    return wrapWithFilter(svgMarkup, 'brandkit-grayscale', '<feColorMatrix type="saturate" values="0"/>');
+  }
 
   const targetColor = resolveTargetColor(variant, monochromeHex);
-  return svgMarkup.replace(FILL_ATTR_PATTERN, (_match, pre, value, post) => {
-    if (value.toLowerCase() === 'none') return `${pre}${value}${post}`;
-    return `${pre}${targetColor}${post}`;
-  });
+  // A flood-and-composite filter recolors every visible pixel to a flat
+  // color using the shape's own alpha as a mask. Unlike rewriting fill
+  // attributes, this works no matter how the source encodes color
+  // (fill="#hex", fill="rgb(...)" — what imagetracerjs emits — style
+  // attributes, CSS classes, gradients, or a default black fill).
+  return wrapWithFilter(
+    svgMarkup,
+    'brandkit-recolor',
+    `<feFlood flood-color="${targetColor}" result="flood"/><feComposite in="flood" in2="SourceGraphic" operator="in"/>`
+  );
 }
 
 function resolveTargetColor(variant: VariantName, monochromeHex?: string): string {
@@ -26,9 +32,8 @@ function resolveTargetColor(variant: VariantName, monochromeHex?: string): strin
   }
 }
 
-function applyGrayscaleFilter(svgMarkup: string): string {
-  const filterId = 'brandkit-grayscale';
-  const filterDef = `<filter id="${filterId}"><feColorMatrix type="saturate" values="0"/></filter>`;
+function wrapWithFilter(svgMarkup: string, filterId: string, filterInner: string): string {
+  const filterDef = `<filter id="${filterId}">${filterInner}</filter>`;
 
   const withDefs = svgMarkup.includes('<defs>')
     ? svgMarkup.replace('<defs>', `<defs>${filterDef}`)

@@ -33,4 +33,19 @@ describe('fontPairingFor', () => {
     expect(pairing.heading).toBe('Playfair Display');
     expect(pairing.body).toBe('Lora');
   });
+
+  it('gives a serif generic fallback for the serif category, since the named webfont is not embedded', () => {
+    // Playfair Display never loads (no @font-face, no bundled font file), so
+    // the SVG/canvas render with the CSS generic fallback. A "sans-serif"
+    // fallback here would visually contradict the intended classic-serif
+    // personality entirely.
+    expect(fontPairingFor('classic-serif').fallback).toBe('serif');
+  });
+
+  it('gives a sans-serif generic fallback for every non-serif category', () => {
+    expect(fontPairingFor('geometric-modern').fallback).toBe('sans-serif');
+    expect(fontPairingFor('friendly-rounded').fallback).toBe('sans-serif');
+    expect(fontPairingFor('technical-industrial').fallback).toBe('sans-serif');
+    expect(fontPairingFor('bold-display').fallback).toBe('sans-serif');
+  });
 });

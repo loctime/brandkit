@@ -13,14 +13,22 @@ export interface FontPairing {
   category: PersonalityCategory;
   heading: string;
   body: string;
+  /**
+   * A CSS generic family matching the category's intended feel. None of the
+   * named webfonts above are embedded or loaded (no @font-face, no bundled
+   * font files), so every render actually falls back to this generic — it
+   * must match the category (serif for classic-serif) or the personality
+   * choice has no visible effect at all.
+   */
+  fallback: 'serif' | 'sans-serif';
 }
 
 const FONT_PAIRINGS: Record<PersonalityCategory, FontPairing> = {
-  'geometric-modern': { category: 'geometric-modern', heading: 'Poppins', body: 'Inter' },
-  'classic-serif': { category: 'classic-serif', heading: 'Playfair Display', body: 'Lora' },
-  'friendly-rounded': { category: 'friendly-rounded', heading: 'Baloo 2', body: 'Quicksand' },
-  'technical-industrial': { category: 'technical-industrial', heading: 'Space Grotesk', body: 'JetBrains Mono' },
-  'bold-display': { category: 'bold-display', heading: 'Archivo Black', body: 'Barlow' },
+  'geometric-modern': { category: 'geometric-modern', heading: 'Poppins', body: 'Inter', fallback: 'sans-serif' },
+  'classic-serif': { category: 'classic-serif', heading: 'Playfair Display', body: 'Lora', fallback: 'serif' },
+  'friendly-rounded': { category: 'friendly-rounded', heading: 'Baloo 2', body: 'Quicksand', fallback: 'sans-serif' },
+  'technical-industrial': { category: 'technical-industrial', heading: 'Space Grotesk', body: 'JetBrains Mono', fallback: 'sans-serif' },
+  'bold-display': { category: 'bold-display', heading: 'Archivo Black', body: 'Barlow', fallback: 'sans-serif' },
 };
 
 export function inferPersonality(

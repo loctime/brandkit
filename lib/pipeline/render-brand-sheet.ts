@@ -57,8 +57,8 @@ function drawPaletteSwatches(ctx: CanvasRenderingContext2D, palette: PaletteColo
 
 function drawFontLabels(ctx: CanvasRenderingContext2D, fontPairing: FontPairing): void {
   ctx.fillStyle = '#111111';
-  ctx.font = `48px "${fontPairing.heading}", sans-serif`;
+  ctx.font = `48px "${fontPairing.heading}", ${fontPairing.fallback}`;
   ctx.fillText(fontPairing.heading, 60, 700);
-  ctx.font = `28px "${fontPairing.body}", sans-serif`;
+  ctx.font = `28px "${fontPairing.body}", ${fontPairing.fallback}`;
   ctx.fillText(fontPairing.body, 60, 760);
 }

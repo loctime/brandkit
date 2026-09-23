@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { generateSimplifiedCandidates } from '../../lib/pipeline/simplify';
 import { traceToSvg } from '../../lib/pipeline/trace';
 import type { TracedResult } from './UploadStep';
@@ -11,7 +12,12 @@ interface SimplifyChooserProps {
 }
 
 export function SimplifyChooser({ traced, onChoose, onRejectAll }: SimplifyChooserProps) {
-  const candidates = generateSimplifiedCandidates(traced.pixels, traceToSvg);
+  // generateSimplifiedCandidates runs 3 posterize+trace passes over the full
+  // pixel buffer — expensive enough that it must not re-run on every render.
+  const candidates = useMemo(
+    () => generateSimplifiedCandidates(traced.pixels, traceToSvg),
+    [traced.pixels]
+  );
 
   return (
     <div>

@@ -9,5 +9,6 @@ export const traceToSvg: TraceFn = (pixels: PixelBuffer): string => {
     qtres: 1,
     pathomit: 8,
     numberofcolors: 16,
+    viewbox: true,
   });
 };

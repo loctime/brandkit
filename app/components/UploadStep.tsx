@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { validateUploadedFile } from '../../lib/upload/validate';
 import { removeBackground } from '../../lib/pipeline/remove-background';
 import { traceToSvg } from '../../lib/pipeline/trace';
+import { downscaleImage } from '../../lib/pipeline/downscale';
+import { hasSignificantTransparency } from '../../lib/pipeline/transparency';
 import { analyzeSvgComplexity, type ComplexityResult } from '../../lib/svg/complexity';
 import type { PixelBuffer } from '../../lib/pipeline/posterize';
 
@@ -36,20 +38,32 @@ export function UploadStep({ onTraced }: UploadStepProps) {
     try {
       // An uploaded SVG is already vector: skip background-removal/tracing
       // and use it directly instead of degrading it through the raster path.
+      // Always mark it clean — the user already supplied a real vector, so
+      // it must never get routed into the simplify-candidate re-trace flow.
       if (file.type === 'image/svg+xml') {
         const svgText = await file.text();
         const pixels = await rasterizeSvgToPixels(svgText);
-        const complexity = analyzeSvgComplexity(svgText);
+        const complexity = { ...analyzeSvgComplexity(svgText), isClean: true };
         onTraced({ baseSvg: svgText, complexity, pixels });
         setStatus('idle');
         return;
       }
 
-      setProgressLabel('Quitando el fondo…');
-      const cutout = await removeBackground(file);
+      const downscaled = await downscaleImage(file);
+      const rawPixels = await blobToPixels(downscaled);
+
+      let pixels: PixelBuffer;
+      if (hasSignificantTransparency(rawPixels)) {
+        // Already transparent: background removal would replace this alpha
+        // with a fresh model-generated mask over meaningless RGB data.
+        pixels = rawPixels;
+      } else {
+        setProgressLabel('Quitando el fondo…');
+        const cutout = await removeBackground(downscaled);
+        pixels = await blobToPixels(cutout);
+      }
 
       setProgressLabel('Vectorizando…');
-      const pixels = await blobToPixels(cutout);
       const baseSvg = traceToSvg(pixels);
       const complexity = analyzeSvgComplexity(baseSvg);
 

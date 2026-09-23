@@ -1,19 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { UploadStep, type TracedResult } from './components/UploadStep';
 import { SimplifyChooser } from './components/SimplifyChooser';
-import { BrandInputs } from './components/BrandInputs';
+import { BrandInputs, type BrandInfoResult } from './components/BrandInputs';
 import { ResultsStep } from './components/ResultsStep';
 import { isWasmSupported } from '../lib/upload/browser-support';
-import type { PaletteColor } from '../lib/color/palette';
-import type { FontPairing } from '../lib/color/personality';
+import { analyzeSvgComplexity } from '../lib/svg/complexity';
 
-interface BrandInfo {
-  brandName: string;
-  palette: PaletteColor[];
-  fontPairing: FontPairing;
-}
+type BrandInfo = BrandInfoResult;
 
 export default function Home() {
   const [traced, setTraced] = useState<TracedResult | null>(null);
@@ -32,6 +27,15 @@ export default function Home() {
     setApprovedSvg(null);
     setBrandInfo(null);
   }
+
+  // The complexity that drives personality inference must reflect the SVG
+  // that was actually approved — a chosen simplified candidate is far less
+  // detailed than the original raw trace, and reusing the original's stale
+  // complexity would skew the wordmark's font pairing toward the wrong flavor.
+  const approvedComplexity = useMemo(
+    () => (approvedSvg ? analyzeSvgComplexity(approvedSvg) : null),
+    [approvedSvg]
+  );
 
   if (typeof window !== 'undefined' && !isWasmSupported()) {
     return (
@@ -56,10 +60,10 @@ export default function Home() {
           onRejectAll={handleReset}
         />
       )}
-      {approvedSvg && traced && !brandInfo && (
+      {approvedSvg && traced && approvedComplexity && !brandInfo && (
         <BrandInputs
           logoPixels={traced.pixels}
-          complexity={traced.complexity}
+          complexity={approvedComplexity}
           onReady={setBrandInfo}
         />
       )}

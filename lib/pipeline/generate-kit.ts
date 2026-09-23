@@ -1,5 +1,5 @@
 import { buildColorVariant, type VariantName } from '../color/variants';
-import { pickPrimaryBrandColor, type PaletteColor } from '../color/palette';
+import type { PaletteColor } from '../color/palette';
 import type { FontPairing } from '../color/personality';
 import { renderWordmarkSvg } from './wordmark';
 import { buildIco, type IcoImage } from '../ico/packer';
@@ -17,11 +17,15 @@ export interface GenerateKitInput {
   baseSvg: string;
   brandName: string;
   palette: PaletteColor[];
+  primaryColor: PaletteColor;
   fontPairing: FontPairing;
 }
 
 export async function generateBrandKit(input: GenerateKitInput): Promise<Uint8Array> {
-  const monochromeHex = pickPrimaryBrandColor(input.palette)?.hex ?? '#000000';
+  // Always driven by the logo's own primary color (see BrandInputs), never
+  // the merged palette — a reference photo's dominant color must never
+  // become the single-color logo variant's color.
+  const monochromeHex = input.primaryColor?.hex ?? '#000000';
   const entries: ZipEntry[] = [];
 
   const variantSvgs: Record<VariantName, string> = {} as Record<VariantName, string>;
@@ -62,7 +66,12 @@ export async function generateBrandKit(input: GenerateKitInput): Promise<Uint8Ar
   const wordmarkSvg = renderWordmarkSvg(input.brandName, input.fontPairing);
   entries.push({ path: 'wordmark/wordmark.svg', data: wordmarkSvg });
   for (const background of BACKGROUNDS) {
-    const blob = await renderPng(wordmarkSvg, 480, background);
+    // Dark text on the black background would be invisible — render a
+    // light-text version specifically for that background instead of
+    // reusing the dark-on-transparent/white version everywhere.
+    const wordmarkForBg =
+      background === 'black' ? renderWordmarkSvg(input.brandName, input.fontPairing, '#f5f5f5') : wordmarkSvg;
+    const blob = await renderPng(wordmarkForBg, 480, background);
     entries.push({ path: `wordmark/wordmark-${background}.png`, data: await blobToBytes(blob) });
   }
 
