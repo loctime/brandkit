@@ -42,4 +42,17 @@ describe('extractPalette', () => {
     const primary = pickPrimaryBrandColor(palette);
     expect(primary.hex).toBe('#dc1e28');
   });
+
+  it('prefers a saturated cluster over a low-saturation gray that is not literally near-white', () => {
+    // A compressed/anti-aliased "white" paper background often lands at
+    // something like #d4d2ce, not pure white — low saturation, but each
+    // channel stays under the near-white brightness threshold.
+    const pixels: number[][] = [];
+    for (let i = 0; i < 30; i++) pixels.push([212, 210, 206, 255]); // low-saturation gray background
+    for (let i = 0; i < 5; i++) pixels.push([50, 185, 92, 255]); // brand green logo
+    const buffer = bufferFromPixels(pixels);
+    const palette = extractPalette(buffer);
+    const primary = pickPrimaryBrandColor(palette);
+    expect(primary.hex).toBe('#32b95c');
+  });
 });

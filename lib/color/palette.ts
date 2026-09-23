@@ -8,6 +8,7 @@ export interface PaletteColor {
 const QUANTIZE_STEP = 32;
 const NEAR_WHITE_THRESHOLD = 235;
 const NEAR_BLACK_THRESHOLD = 20;
+const LOW_SATURATION_THRESHOLD = 0.12;
 
 export function extractPalette(pixels: PixelBuffer, maxColors: number = 6): PaletteColor[] {
   const buckets = new Map<string, { r: number; g: number; b: number; count: number }>();
@@ -43,22 +44,38 @@ export function extractPalette(pixels: PixelBuffer, maxColors: number = 6): Pale
 }
 
 /**
- * The most-populated cluster is often a near-white or near-black background
- * rather than the actual brand color. Picks the first cluster that isn't
- * near-white/near-black, falling back to palette[0] if every cluster is.
+ * The most-populated cluster is often a background rather than the actual
+ * brand color — either literally near-white/near-black, or a low-saturation
+ * gray (e.g. a JPEG-compressed "white" paper background landing around
+ * #d4d2ce) that isn't extreme enough to trip a brightness-only check. Picks
+ * the first cluster that is neither, falling back to palette[0] if every
+ * cluster is background-like.
  */
 export function pickPrimaryBrandColor(palette: PaletteColor[]): PaletteColor {
-  const saturatedFirst = palette.find((color) => !isNearAchromaticExtreme(color.hex));
+  const saturatedFirst = palette.find((color) => !isBackgroundLike(color.hex));
   return saturatedFirst ?? palette[0];
 }
 
-function isNearAchromaticExtreme(hex: string): boolean {
+function isBackgroundLike(hex: string): boolean {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
   const isNearWhite = r > NEAR_WHITE_THRESHOLD && g > NEAR_WHITE_THRESHOLD && b > NEAR_WHITE_THRESHOLD;
   const isNearBlack = r < NEAR_BLACK_THRESHOLD && g < NEAR_BLACK_THRESHOLD && b < NEAR_BLACK_THRESHOLD;
-  return isNearWhite || isNearBlack;
+  return isNearWhite || isNearBlack || saturationOf(r, g, b) < LOW_SATURATION_THRESHOLD;
+}
+
+function saturationOf(r: number, g: number, b: number): number {
+  const rNorm = r / 255;
+  const gNorm = g / 255;
+  const bNorm = b / 255;
+  const max = Math.max(rNorm, gNorm, bNorm);
+  const min = Math.min(rNorm, gNorm, bNorm);
+  if (max === min) return 0;
+
+  const lightness = (max + min) / 2;
+  const delta = max - min;
+  return lightness > 0.5 ? delta / (2 - max - min) : delta / (max + min);
 }
 
 function rgbToHex(r: number, g: number, b: number): string {
