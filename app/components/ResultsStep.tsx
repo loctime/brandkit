@@ -77,7 +77,7 @@ export function ResultsStep({ input, onReset }: ResultsStepProps) {
   const [variantBg, setVariantBg] = useState<'checker' | 'white' | 'black'>('checker');
 
   // Interactive controls for Layouts Tab
-  const [selectedLayout, setSelectedLayout] = useState<'horizontal' | 'vertical' | 'badge'>('horizontal');
+  const [selectedLayout, setSelectedLayout] = useState<'horizontal' | 'vertical' | 'badge' | 'appIcon'>('horizontal');
   const [layoutBg, setLayoutBg] = useState<'checker' | 'white' | 'black'>('checker');
 
   // Search filter for file explorer tab
@@ -156,6 +156,8 @@ export function ResultsStep({ input, onReset }: ResultsStepProps) {
   const layoutVerticalPng = filesMap.get('layouts/logo-vertical.png');
   const layoutBadgeSvg = filesMap.get('layouts/logo-badge.svg');
   const layoutBadgePng = filesMap.get('layouts/logo-badge.png');
+  const layoutAppIconSvg = filesMap.get('layouts/logo-app-icon.svg');
+  const layoutAppIconPng = filesMap.get('layouts/logo-app-icon.png');
 
   // Banners lookups
   const bannerLiSvg = filesMap.get('banners/banner-linkedin.svg');
@@ -444,9 +446,10 @@ export function ResultsStep({ input, onReset }: ResultsStepProps) {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex flex-wrap items-center gap-1.5 bg-zinc-950 p-1.5 rounded-2xl border border-zinc-800">
                 {[
-                  { id: 'horizontal', label: 'Horizontal (Web/Navbar)' },
-                  { id: 'vertical', label: 'Vertical / Apilado' },
-                  { id: 'badge', label: 'Emblema / Badge' },
+                  { id: 'horizontal', label: 'Horizontal (Web & Navbar)' },
+                  { id: 'vertical', label: 'Vertical / Editorial' },
+                  { id: 'badge', label: 'Sello / Emblema' },
+                  { id: 'appIcon', label: 'Icono de App / Avatar' },
                 ].map((l) => (
                   <button
                     key={l.id}
@@ -522,6 +525,12 @@ export function ResultsStep({ input, onReset }: ResultsStepProps) {
                   dangerouslySetInnerHTML={{ __html: layoutBadgeSvg.text }}
                 />
               )}
+              {selectedLayout === 'appIcon' && layoutAppIconSvg?.text && (
+                <div
+                  className="preview-svg w-full h-full max-w-full max-h-full flex items-center justify-center pointer-events-none"
+                  dangerouslySetInnerHTML={{ __html: layoutAppIconSvg.text }}
+                />
+              )}
             </div>
 
             {/* Downloads */}
@@ -575,21 +584,42 @@ export function ResultsStep({ input, onReset }: ResultsStepProps) {
                 {selectedLayout === 'badge' && layoutBadgeSvg && (
                   <a
                     href={layoutBadgeSvg.url}
-                    download="logo-badge.svg"
+                    download="logo-sello.svg"
                     className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium shadow-md shadow-indigo-600/20 transition-all"
                   >
                     <FileCode2 className="w-4 h-4" />
-                    <span>Descargar SVG Emblema</span>
+                    <span>Descargar SVG Sello Oficial</span>
                   </a>
                 )}
                 {selectedLayout === 'badge' && layoutBadgePng && (
                   <a
                     href={layoutBadgePng.url}
-                    download="logo-badge.png"
+                    download="logo-sello.png"
                     className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-zinc-800 bg-zinc-950 hover:bg-zinc-800 text-zinc-300 text-xs font-medium transition-all"
                   >
                     <Download className="w-3.5 h-3.5 text-zinc-400" />
-                    <span>PNG Emblema</span>
+                    <span>PNG Sello</span>
+                  </a>
+                )}
+
+                {selectedLayout === 'appIcon' && layoutAppIconSvg && (
+                  <a
+                    href={layoutAppIconSvg.url}
+                    download="logo-app-icon.svg"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium shadow-md shadow-indigo-600/20 transition-all"
+                  >
+                    <FileCode2 className="w-4 h-4" />
+                    <span>Descargar SVG App Icon</span>
+                  </a>
+                )}
+                {selectedLayout === 'appIcon' && layoutAppIconPng && (
+                  <a
+                    href={layoutAppIconPng.url}
+                    download="logo-app-icon.png"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-zinc-800 bg-zinc-950 hover:bg-zinc-800 text-zinc-300 text-xs font-medium transition-all"
+                  >
+                    <Download className="w-3.5 h-3.5 text-zinc-400" />
+                    <span>PNG App Icon</span>
                   </a>
                 )}
               </div>

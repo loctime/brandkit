@@ -8,7 +8,12 @@ import { buildZipBytes, type ZipEntry } from '../package/zip';
 import { renderPng, renderRectPng, type Background } from './render-raster';
 import { getSvgAspectRatio } from '../svg/aspect-ratio';
 import { renderBrandSheet } from './render-brand-sheet';
-import { renderHorizontalLayoutSvg, renderVerticalLayoutSvg, renderBadgeLayoutSvg } from './layouts';
+import { 
+  renderHorizontalLayoutSvg, 
+  renderVerticalLayoutSvg, 
+  renderBadgeLayoutSvg,
+  renderAppIconLayoutSvg 
+} from './layouts';
 import { renderPatternSvg } from './patterns';
 import { renderLinkedInBannerSvg, renderTwitterBannerSvg } from './banners';
 import { renderGoldFoilSvg, renderNeonGlowSvg, renderStampGrungeSvg } from './styles';
@@ -100,20 +105,31 @@ export async function generateBrandKit(input: GenerateKitInput): Promise<Uint8Ar
     logoSvg: variantSvgs['full-color'],
     brandName: input.brandName,
     fontPairing: input.fontPairing,
+    primaryColor: monochromeHex,
   });
   entries.push({ path: 'layouts/logo-vertical.svg', data: verticalSvg });
-  const verticalBlob = await renderPng(verticalSvg, 500, 'transparent');
+  const verticalBlob = await renderPng(verticalSvg, 600, 'transparent');
   entries.push({ path: 'layouts/logo-vertical.png', data: await blobToBytes(verticalBlob) });
 
   const badgeSvg = renderBadgeLayoutSvg({
     logoSvg: variantSvgs['full-color'],
     brandName: input.brandName,
     fontPairing: input.fontPairing,
-    badgeColor: monochromeHex,
+    primaryColor: monochromeHex,
   });
   entries.push({ path: 'layouts/logo-badge.svg', data: badgeSvg });
-  const badgeBlob = await renderPng(badgeSvg, 500, 'transparent');
+  const badgeBlob = await renderPng(badgeSvg, 600, 'transparent');
   entries.push({ path: 'layouts/logo-badge.png', data: await blobToBytes(badgeBlob) });
+
+  const appIconSvg = renderAppIconLayoutSvg({
+    logoSvg: variantSvgs['full-color'],
+    brandName: input.brandName,
+    fontPairing: input.fontPairing,
+    primaryColor: monochromeHex,
+  });
+  entries.push({ path: 'layouts/logo-app-icon.svg', data: appIconSvg });
+  const appIconBlob = await renderPng(appIconSvg, 512, 'transparent');
+  entries.push({ path: 'layouts/logo-app-icon.png', data: await blobToBytes(appIconBlob) });
 
   // 2. Social Media Banners
   const liBannerSvg = renderLinkedInBannerSvg({

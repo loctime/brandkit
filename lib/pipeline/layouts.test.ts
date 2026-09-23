@@ -3,6 +3,7 @@ import {
   renderHorizontalLayoutSvg, 
   renderVerticalLayoutSvg, 
   renderBadgeLayoutSvg, 
+  renderAppIconLayoutSvg,
   parseSvgContent 
 } from './layouts';
 import type { FontPairing } from '../color/personality';
@@ -14,35 +15,27 @@ const mockPairing: FontPairing = {
   fallback: 'sans-serif',
 };
 
-const mockLogo = `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="red"/></svg>`;
+const mockSquareLogo = `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="red"/></svg>`;
+const mockWideLogo = `<svg viewBox="0 0 400 150"><circle cx="50" cy="75" r="40" fill="orange"/><text x="120" y="80">BrandName</text></svg>`;
 
 describe('layouts module', () => {
   it('parses viewBox and content properly', () => {
-    const { viewBox, content } = parseSvgContent(mockLogo);
+    const { viewBox, content } = parseSvgContent(mockSquareLogo);
     expect(viewBox).toBe('0 0 100 100');
     expect(content).toContain('circle');
   });
 
   it('preserves a filter applied on the root <svg> by re-wrapping the content in a <g>', () => {
-    // buildColorVariant's recolor (black/white/monochrome) applies its
-    // feFlood/feComposite filter via a `filter="url(#...)"` attribute on the
-    // root <svg> tag itself, not on any inner element. A naive extraction
-    // that keeps only what's between the tags drops that attribute — the
-    // filter definition survives in <defs> but nothing ever references it,
-    // so the recolor silently has no effect wherever this content gets
-    // re-embedded (e.g. the pattern generator).
     const filteredLogo = `<svg viewBox="0 0 100 100" filter="url(#brandkit-recolor)"><defs><filter id="brandkit-recolor"><feFlood flood-color="#ffffff" result="flood"/><feComposite in="flood" in2="SourceGraphic" operator="in"/></filter></defs><path fill="rgb(220,30,40)" d="M0 0 L10 10 Z"/></svg>`;
     const { content } = parseSvgContent(filteredLogo);
 
     expect(content).toContain('filter="url(#brandkit-recolor)"');
-    // The filter must wrap the actual drawable content, not just appear
-    // somewhere in the string disconnected from it.
     expect(content).toMatch(/<g filter="url\(#brandkit-recolor\)">[\s\S]*<path/);
   });
 
-  it('renders horizontal layout with text and nested svg', () => {
+  it('renders horizontal layout with text when logo is a square icon', () => {
     const svg = renderHorizontalLayoutSvg({
-      logoSvg: mockLogo,
+      logoSvg: mockSquareLogo,
       brandName: 'Acme Corp',
       fontPairing: mockPairing,
     });
@@ -52,25 +45,49 @@ describe('layouts module', () => {
     expect(svg).toContain('circle');
   });
 
-  it('renders vertical layout centered', () => {
-    const svg = renderVerticalLayoutSvg({
-      logoSvg: mockLogo,
-      brandName: 'Acme Corp',
+  it('does NOT duplicate brand name when logo is already wide', () => {
+    const svg = renderHorizontalLayoutSvg({
+      logoSvg: mockWideLogo,
+      brandName: 'BrandName',
       fontPairing: mockPairing,
     });
-    expect(svg).toContain('text-anchor="middle"');
-    expect(svg).toContain('Acme Corp');
+    // Should contain the inner svg content but not an added <text> with brandName
+    expect(svg).toContain('<svg');
+    // Only the inner content has BrandName, not an additional text tag
+    const occurrences = (svg.match(/BrandName/g) ?? []).length;
+    expect(occurrences).toBe(1);
   });
 
-  it('renders badge layout with rounded rectangle', () => {
-    const svg = renderBadgeLayoutSvg({
-      logoSvg: mockLogo,
-      brandName: 'Acme',
+  it('renders vertical layout centered without duplicate text for wide logos', () => {
+    const svg = renderVerticalLayoutSvg({
+      logoSvg: mockWideLogo,
+      brandName: 'BrandName',
       fontPairing: mockPairing,
-      badgeColor: '#123456',
     });
-    expect(svg).toContain('fill="#123456"');
-    expect(svg).toContain('rx="100"');
-    expect(svg).toContain('Acme');
+    expect(svg).toContain('IDENTIDAD DE MARCA');
+    const occurrences = (svg.match(/BrandName/g) ?? []).length;
+    expect(occurrences).toBe(1);
+  });
+
+  it('renders official seal badge with stars and quality hallmark', () => {
+    const svg = renderBadgeLayoutSvg({
+      logoSvg: mockWideLogo,
+      brandName: 'BrandName',
+      fontPairing: mockPairing,
+      primaryColor: '#ea580c',
+    });
+    expect(svg).toContain('SELLO OFICIAL');
+    expect(svg).toContain('CALIDAD GARANTIZADA');
+    expect(svg).toContain('★');
+  });
+
+  it('renders squircle app icon layout', () => {
+    const svg = renderAppIconLayoutSvg({
+      logoSvg: mockWideLogo,
+      brandName: 'BrandName',
+      fontPairing: mockPairing,
+    });
+    expect(svg).toContain('rx="105"');
+    expect(svg).toContain('viewBox="0 0 512 512"');
   });
 });
